@@ -1,43 +1,33 @@
 return function()
-    -- Services
     local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
     local UserInputService = game:GetService("UserInputService")
-    local TweenService = game:GetService("TweenService")
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local VirtualUser = game:GetService("VirtualUser")
-    local GuiService = game:GetService("GuiService")
     local Debris = game:GetService("Debris")
+    local Workspace = game:GetService("Workspace")
     
     local player = Players.LocalPlayer
-    local character = player.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart") -- 🔥 FIX: HumanoidRootPart
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
     
-    -- =====================================
-    -- GUI ERSTELLEN (Mobile-optimiert)
-    -- =====================================
+    -- GUI
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "DeltaAdminMenu"
-    screenGui.Parent = player.PlayerGui
+    screenGui.Parent = player:WaitForChild("PlayerGui")
     
-    -- Hauptframe
     local mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(0, 350, 0, 500)
-    mainFrame.Position = UDim2.new(0.5, -175, 0.5, -250) -- 🔥 FIX: Zentriert
+    mainFrame.Position = UDim2.new(0.5, -175, 0.5, -250)
     mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    mainFrame.BackgroundTransparency = 0.15
+    mainFrame.BackgroundTransparency = 0.1
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
     mainFrame.Draggable = true
     mainFrame.Parent = screenGui
-    mainFrame.Visible = false -- Startet ausgeblendet
+    mainFrame.Visible = true
     
-    -- Abgerundete Ecken
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 12)
     corner.Parent = mainFrame
     
-    -- Titel
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, 0, 0, 40)
     title.BackgroundTransparency = 1
@@ -47,7 +37,6 @@ return function()
     title.Font = Enum.Font.GothamBold
     title.Parent = mainFrame
     
-    -- Schließen-Button
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 40, 0, 40)
     closeBtn.Position = UDim2.new(1, -45, 0, 5)
@@ -67,7 +56,6 @@ return function()
         screenGui:Destroy()
     end)
     
-    -- Scrollbare Liste für Buttons
     local scrollFrame = Instance.new("ScrollingFrame")
     scrollFrame.Size = UDim2.new(1, -20, 1, -60)
     scrollFrame.Position = UDim2.new(0, 10, 0, 50)
@@ -81,10 +69,7 @@ return function()
     uiList.Padding = UDim.new(0, 8)
     uiList.Parent = scrollFrame
     
-    -- =====================================
-    -- BUTTON HELPER
-    -- =====================================
-    local function createButton(text, color, callback, layoutOrder)
+    local function createButton(text, color, callback)
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 45)
         btn.BackgroundColor3 = color or Color3.fromRGB(45, 45, 60)
@@ -93,7 +78,6 @@ return function()
         btn.TextScaled = true
         btn.Font = Enum.Font.GothamMedium
         btn.BorderSizePixel = 0
-        btn.LayoutOrder = layoutOrder or 1
         btn.Parent = scrollFrame
         
         local corner2 = Instance.new("UICorner")
@@ -101,15 +85,10 @@ return function()
         corner2.Parent = btn
         
         btn.MouseButton1Click:Connect(callback)
-        
         return btn
     end
     
-    -- =====================================
-    -- FUNKTIONEN
-    -- =====================================
-    
-    -- 1️⃣ ANTI-VOICE-BAN
+    -- Anti-Voice-Ban
     local function antiVoiceBan()
         local voiceService = game:GetService("VoiceChatService")
         if voiceService then
@@ -126,51 +105,27 @@ return function()
         oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
             local args = {...}
             local method = getnamecallmethod()
-            
             if method == "Kick" or method == "Ban" then
                 local argStr = tostring(args[1] or "")
                 if string.find(argStr:lower(), "voice") or string.find(argStr:lower(), "mic") then
                     return nil
                 end
             end
-            
             return oldNamecall(self, ...)
         end)
-        
         print("✅ Anti-Voice-Ban aktiviert!")
-        
-        -- Bestätigung anzeigen
-        local confirm = Instance.new("TextLabel")
-        confirm.Size = UDim2.new(0, 200, 0, 30)
-        confirm.Position = UDim2.new(0.5, -100, 0.1, 50)
-        confirm.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        confirm.BackgroundTransparency = 0.3
-        confirm.Text = "✅ Voice-Ban Schutz aktiv!"
-        confirm.TextColor3 = Color3.fromRGB(255, 255, 255)
-        confirm.TextScaled = true
-        confirm.Font = Enum.Font.GothamBold
-        confirm.Parent = mainFrame
-        Debris:AddItem(confirm, 2)
     end
     
-    -- 2️⃣ ANTI-BAN
+    -- Anti-Ban
     local function antiBan()
         local oldKick = game.Kick
         game.Kick = function(...)
-            local args = {...}
-            for _, arg in pairs(args) do
-                if type(arg) == "string" then
-                    arg = string.gsub(arg, "Ban", "⚠️ Fehler")
-                    arg = string.gsub(arg, "Kick", "⚠️ Fehler")
-                end
-            end
             return false
         end
-        
         print("🛡️ Anti-Ban aktiviert!")
     end
     
-    -- 3️⃣ TELEPORT
+    -- Teleport
     local function teleportTo(target)
         if not rootPart then return end
         for _, plr in pairs(Players:GetPlayers()) do
@@ -179,12 +134,14 @@ return function()
                 if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
                     rootPart.CFrame = targetChar.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
                     print("🌀 Teleportiert zu " .. plr.Name)
+                    return
                 end
             end
         end
+        print("❌ Spieler nicht gefunden!")
     end
     
-    -- 4️⃣ KILL
+    -- Kill
     local function killPlayer(targetName)
         for _, plr in pairs(Players:GetPlayers()) do
             if plr.Name:lower():find(targetName:lower()) then
@@ -194,13 +151,15 @@ return function()
                     if humanoid then
                         humanoid.Health = 0
                         print("💀 " .. plr.Name .. " getötet!")
+                        return
                     end
                 end
             end
         end
+        print("❌ Spieler nicht gefunden!")
     end
     
-    -- 5️⃣ FREEZE
+    -- Freeze
     local function toggleFreeze(targetName)
         for _, plr in pairs(Players:GetPlayers()) do
             if plr.Name:lower():find(targetName:lower()) then
@@ -212,12 +171,14 @@ return function()
                         end
                     end
                     print("❄️ " .. plr.Name .. " eingefroren/aufgetaut!")
+                    return
                 end
             end
         end
+        print("❌ Spieler nicht gefunden!")
     end
     
-    -- 6️⃣ FLY
+    -- Fly
     local flying = false
     local flyBodyVelocity
     local flyConnection
@@ -233,12 +194,11 @@ return function()
             bodyVelocity.Parent = rootPart
             flyBodyVelocity = bodyVelocity
             
-            flyConnection = RunService.Heartbeat:Connect(function()
+            flyConnection = game:GetService("RunService").Heartbeat:Connect(function()
                 if flying and rootPart and flyBodyVelocity then
                     flyBodyVelocity.Velocity = Vector3.new(0, 10, 0)
                 end
             end)
-            
             print("🦅 Flugmodus aktiviert!")
         else
             if flyBodyVelocity then
@@ -253,11 +213,11 @@ return function()
         end
     end
     
-    -- 7️⃣ LAG-MASCHINE
+    -- Lag-Maschine
     local function lagMachine()
         local folder = Instance.new("Folder")
         folder.Name = "LagFolder"
-        folder.Parent = workspace
+        folder.Parent = Workspace
         
         for i = 1, 5000 do
             local part = Instance.new("Part")
@@ -276,123 +236,83 @@ return function()
         print("🐌 5000 Teile erstellt!")
     end
     
-    -- 8️⃣ CLEANUP
+    -- Cleanup
     local function cleanup()
-        for _, obj in pairs(workspace:GetDescendants()) do
+        for _, obj in pairs(Workspace:GetDescendants()) do
             if obj:IsA("Part") and obj.Material == Enum.Material.Neon then
                 obj:Destroy()
             end
         end
-        local folder = workspace:FindFirstChild("LagFolder")
+        local folder = Workspace:FindFirstChild("LagFolder")
         if folder then folder:Destroy() end
-        print("🧹 Alle Lag-Parts gelöscht!")
+        print("🧹 Aufgeräumt!")
     end
     
-    -- =====================================
-    -- MENÜ BUTTONS ERSTELLEN
-    -- =====================================
-    
-    local order = 0
-    
-    -- Anti-Voice-Ban
-    createButton("🔇 Anti-Voice-Ban", Color3.fromRGB(50, 100, 255), function()
-        antiVoiceBan()
-    end, order); order = order + 1
-    
-    -- Anti-Ban
-    createButton("🛡️ Anti-Ban / Anti-Kick", Color3.fromRGB(255, 50, 100), function()
-        antiBan()
-    end, order); order = order + 1
-    
-    -- Teleport
-    createButton("🌀 Teleport zu Spieler", Color3.fromRGB(50, 200, 100), function()
+    -- Buttons
+    createButton("🔇 Anti-Voice-Ban", Color3.fromRGB(50, 100, 255), antiVoiceBan)
+    createButton("🛡️ Anti-Ban", Color3.fromRGB(255, 50, 100), antiBan)
+    createButton("🌀 Teleport", Color3.fromRGB(50, 200, 100), function()
         local inputBox = Instance.new("TextBox")
         inputBox.Size = UDim2.new(0, 200, 0, 40)
         inputBox.Position = UDim2.new(0.5, -100, 0.5, -20)
         inputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
         inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
         inputBox.PlaceholderText = "Spielername"
-        inputBox.Text = ""
         inputBox.Font = Enum.Font.Gotham
         inputBox.TextScaled = true
         inputBox.Parent = mainFrame
-        
         inputBox.FocusLost:Connect(function(enterPressed)
             if enterPressed and inputBox.Text ~= "" then
                 teleportTo(inputBox.Text)
                 inputBox:Destroy()
             end
         end)
-        
         Debris:AddItem(inputBox, 5)
-    end, order); order = order + 1
+    end)
     
-    -- Kill
-    createButton("💀 Spieler töten", Color3.fromRGB(255, 50, 50), function()
+    createButton("💀 Töten", Color3.fromRGB(255, 50, 50), function()
         local inputBox = Instance.new("TextBox")
         inputBox.Size = UDim2.new(0, 200, 0, 40)
         inputBox.Position = UDim2.new(0.5, -100, 0.5, -20)
         inputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
         inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
         inputBox.PlaceholderText = "Spielername"
-        inputBox.Text = ""
         inputBox.Font = Enum.Font.Gotham
         inputBox.TextScaled = true
         inputBox.Parent = mainFrame
-        
         inputBox.FocusLost:Connect(function(enterPressed)
             if enterPressed and inputBox.Text ~= "" then
                 killPlayer(inputBox.Text)
                 inputBox:Destroy()
             end
         end)
-        
         Debris:AddItem(inputBox, 5)
-    end, order); order = order + 1
+    end)
     
-    -- Freeze
-    createButton("❄️ Freeze / Unfreeze", Color3.fromRGB(100, 200, 255), function()
+    createButton("❄️ Freeze", Color3.fromRGB(100, 200, 255), function()
         local inputBox = Instance.new("TextBox")
         inputBox.Size = UDim2.new(0, 200, 0, 40)
         inputBox.Position = UDim2.new(0.5, -100, 0.5, -20)
         inputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
         inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
         inputBox.PlaceholderText = "Spielername"
-        inputBox.Text = ""
         inputBox.Font = Enum.Font.Gotham
         inputBox.TextScaled = true
         inputBox.Parent = mainFrame
-        
         inputBox.FocusLost:Connect(function(enterPressed)
             if enterPressed and inputBox.Text ~= "" then
                 toggleFreeze(inputBox.Text)
                 inputBox:Destroy()
             end
         end)
-        
         Debris:AddItem(inputBox, 5)
-    end, order); order = order + 1
+    end)
     
-    -- Fly
-    createButton("🦅 Fly Modus (Toggle)", Color3.fromRGB(255, 200, 50), function()
-        toggleFly()
-    end, order); order = order + 1
+    createButton("🦅 Fly", Color3.fromRGB(255, 200, 50), toggleFly)
+    createButton("🐌 Lag", Color3.fromRGB(255, 0, 150), lagMachine)
+    createButton("🧹 Cleanup", Color3.fromRGB(100, 100, 100), cleanup)
     
-    -- Lag-Maschine
-    createButton("🐌 Lag-Maschine", Color3.fromRGB(255, 0, 150), function()
-        lagMachine()
-    end, order); order = order + 1
-    
-    -- Cleanup
-    createButton("🧹 Cleanup", Color3.fromRGB(100, 100, 100), function()
-        cleanup()
-    end, order); order = order + 1
-    
-    -- =====================================
-    -- MOBILE GESTEN
-    -- =====================================
-    
-    -- Menü mit 3-Finger-Tap öffnen/schließen
+    -- 3-Finger-Tap
     local taps = 0
     local lastTapTime = 0
     
@@ -405,7 +325,6 @@ return function()
                 taps = 1
             end
             lastTapTime = currentTime
-            
             if taps >= 3 then
                 mainFrame.Visible = not mainFrame.Visible
                 taps = 0
@@ -413,23 +332,7 @@ return function()
         end
     end)
     
-    -- =====================================
-    -- START-NACHRICHT
-    -- =====================================
-    
-    print("========================================")
-    print("⚡ DELTA ADMIN MENU geladen!")
-    print("📱 3-Finger-Tap = Menü öffnen/schließen")
-    print("🔇 Anti-Voice-Ban aktiviert!")
-    print("🛡️ Anti-Ban aktiviert!")
-    print("========================================")
-    
-    -- Automatisch starten
+    print("⚡ Delta Admin geladen! (3-Finger-Tap)")
     antiVoiceBan()
     antiBan()
-    
-    -- Menü nach 3 Sekunden ausblenden
-    mainFrame.Visible = true
-    task.wait(3)
-    mainFrame.Visible = false
 end
